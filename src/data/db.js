@@ -1,16 +1,29 @@
 import { useState, useEffect } from 'react';
 
-const API_URL = 'https://pixivo-backend.onrender.com/api/data';
+const getInitialDB = () => {
+  const defaultDB = {
+    suppliers: [],
+    materials: [],
+    materialInward: [],
+    products: [],
+    productConfigs: [],
+    productions: []
+  };
 
-// In-memory cache to maintain sync behavior for React components
-let IN_MEMORY_DB = {
-  suppliers: [],
-  materials: [],
-  materialInward: [],
-  products: [],
-  productConfigs: [],
-  productions: []
+  const saved = localStorage.getItem('pixivo_db');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      // Merge saved data with default DB to guarantee all array fields exist
+      return { ...defaultDB, ...parsed };
+    } catch (e) {
+      console.error("Local storage DB corrupted", e);
+    }
+  }
+  return defaultDB;
 };
+
+let IN_MEMORY_DB = getInitialDB();
 
 // Global subscription for reactivity
 let listeners = [];
@@ -18,7 +31,12 @@ export const subscribeDB = (listener) => {
   listeners.push(listener);
   return () => { listeners = listeners.filter(l => l !== listener); };
 };
-const notify = () => listeners.forEach(l => l(IN_MEMORY_DB));
+
+const notify = () => {
+  localStorage.setItem('pixivo_db', JSON.stringify(IN_MEMORY_DB));
+  // Create a new object reference so React detects the change and re-renders
+  listeners.forEach(l => l({ ...IN_MEMORY_DB }));
+};
 
 export const getDB = () => IN_MEMORY_DB;
 
@@ -30,92 +48,56 @@ export const useDB = () => {
   return db;
 };
 
-// Helper for API requests
-const api = async (endpoint, options = {}) => {
-  const token = sessionStorage.getItem('auth_token');
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` })
-  };
-  const res = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
-  if (!res.ok) {
-    if(res.status === 401) {
-      sessionStorage.removeItem('auth_token');
-      sessionStorage.removeItem('user');
-      window.location.reload();
-    }
-    throw new Error('API Request Failed');
-  }
-  return res.json();
-};
+// Simulated async delay to make it feel like real DB and allow UI transitions
+const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
 export const fetchAllData = async () => {
-  try {
-    const [suppliers, materials, products, configs, inward, productions] = await Promise.all([
-      api('/suppliers'),
-      api('/materials'),
-      api('/products'),
-      api('/configs'),
-      api('/inward'),
-      api('/productions')
-    ]);
-
-    IN_MEMORY_DB = {
-      suppliers, 
-      materials, 
-      products, 
-      productConfigs: configs, 
-      materialInward: inward, 
-      productions
-    };
-    notify();
-  } catch (e) {
-    console.error("Failed to sync data", e);
-  }
+  // It's already in memory, just notify to trigger re-renders if needed
+  IN_MEMORY_DB = getInitialDB();
+  notify();
 };
 
+const generateId = () => Math.random().toString(36).substr(2, 9);
+
 // Generic Add Function
-const addItem = async (endpoint, item) => {
-  const result = await api(endpoint, { method: 'POST', body: JSON.stringify(item) });
-  await fetchAllData();
-  return result;
+const addItem = async (store, item) => {
+  await delay(50); // fast local response
+  const newItem = { ...item, id: generateId(), createdAt: new Date().toISOString() };
+  IN_MEMORY_DB[store] = [...(IN_MEMORY_DB[store] || []), newItem];
+  notify();
+  return newItem;
 };
 
 // Generic Delete Function
 export const deleteItem = async (store, id) => {
-  let endpoint = `/${store}`;
-  // Map old frontend store names to backend endpoints
-  if (store === 'materialInward') endpoint = '/inward';
-  else if (store === 'productConfigs') endpoint = '/configs';
-  
-  await api(`${endpoint}/${id}`, { method: 'DELETE' });
-  await fetchAllData();
+  await delay(50);
+  IN_MEMORY_DB[store] = (IN_MEMORY_DB[store] || []).filter(item => item.id !== id);
+  notify();
 };
 
 // Generic Update Function
 export const updateItem = async (store, id, updatedData) => {
-  let endpoint = `/${store}`;
-  if (store === 'materialInward') endpoint = '/inward';
-  else if (store === 'productConfigs') endpoint = '/configs';
-  
-  await api(`${endpoint}/${id}`, { method: 'PUT', body: JSON.stringify(updatedData) });
-  await fetchAllData();
+  await delay(50);
+  IN_MEMORY_DB[store] = (IN_MEMORY_DB[store] || []).map(item => 
+    item.id === id ? { ...item, ...updatedData } : item
+  );
+  notify();
 };
 
 // Specialized CRUD wrappers
-export const addSupplier = (s) => addItem('/suppliers', s);
-export const addMaterial = (m) => addItem('/materials', m);
-export const addProduct = (p) => addItem('/products', { ...p, isActive: true });
-export const addProductConfig = (c) => addItem('/configs', c);
+export const addSupplier = (s) => addItem('suppliers', s);
+export const addMaterial = (m) => addItem('materials', m);
+export const addProduct = (p) => addItem('products', { ...p, isActive: true });
+export const addProductConfig = (c) => addItem('productConfigs', c);
 
-// Transaction Wrappers (Calculation is done in frontend component or API. Since API expects simple objects:)
-export const addMaterialInward = async (entry) => addItem('/inward', entry);
-export const addProduction = async (entry) => addItem('/productions', entry);
+// Transaction Wrappers
+export const addMaterialInward = async (entry) => addItem('materialInward', entry);
+export const addProduction = async (entry) => addItem('productions', entry);
 
 // Utilities
 export const getMaterialStock = (materialId) => {
-  const inward = IN_MEMORY_DB.materialInward.filter(i => i.materialId === materialId).reduce((sum, i) => sum + Number(i.quantity), 0);
-  const used = IN_MEMORY_DB.productions.filter(p => p.materialId === materialId).reduce((sum, p) => sum + Number(p.materialUsed), 0);
+  const inward = (IN_MEMORY_DB.materialInward || []).filter(i => i.materialId === materialId).reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+  const used = (IN_MEMORY_DB.productions || []).filter(p => p.materialId === materialId).reduce((sum, p) => sum + Number(p.materialUsed || 0), 0);
   return (inward - used).toFixed(3);
 };
 

@@ -31,24 +31,13 @@ const Auth = ({ onLogin }) => {
     setLoading(true);
     setError('');
     
-    try {
-      const res = await fetch(`${API_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: formData.username, password: formData.password })
-      });
-      const data = await res.json();
-      
-      if (!res.ok) throw new Error(data.error);
-      
-      sessionStorage.setItem('auth_token', data.token);
-      sessionStorage.setItem('user', JSON.stringify(data.user));
-      onLogin(data.user);
-    } catch (err) {
-      setError(err.message);
-    } finally {
+    setTimeout(() => {
+      const dummyUser = { id: 1, username: formData.username || 'admin', role: 'ADMIN' };
+      sessionStorage.setItem('auth_token', 'offline-token-12345');
+      sessionStorage.setItem('user', JSON.stringify(dummyUser));
+      onLogin(dummyUser);
       setLoading(false);
-    }
+    }, 500);
   };
 
   const [otpReceived, setOtpReceived] = useState('');
@@ -57,52 +46,25 @@ const Auth = ({ onLogin }) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    try {
-      const res = await fetch(`${API_URL}/request-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      
-      // Store OTP to auto-fill
-      setOtpReceived(data.otp || '');
-      setFormData(prev => ({ ...prev, otp: data.otp || '' }));
+    
+    setTimeout(() => {
+      setOtpReceived('123456');
+      setFormData(prev => ({ ...prev, otp: '123456' }));
       setView('register');
-    } catch (err) {
-      setError(err.message);
-    } finally {
       setLoading(false);
-    }
+    }, 500);
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    try {
-      const res = await fetch(`${API_URL}/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          otp: formData.otp,
-          companyName: formData.companyName,
-          username: formData.username,
-          password: formData.password
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      
+    
+    setTimeout(() => {
       setMessage('Registration successful! Please login.');
       setView('employee');
-    } catch (err) {
-      setError(err.message);
-    } finally {
       setLoading(false);
-    }
+    }, 500);
   };
 
   return (
