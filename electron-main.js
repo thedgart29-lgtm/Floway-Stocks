@@ -14,7 +14,7 @@ autoUpdater.autoInstallOnAppQuit = true;
 let win;
 
 function createWindow() {
-  const isDev = process.env.NODE_ENV === 'development';
+  const isDev = !app.isPackaged;
   
   // Disable default menu
   Menu.setApplicationMenu(null);
