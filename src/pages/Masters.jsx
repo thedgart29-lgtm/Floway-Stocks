@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useDB, addSupplier, addMaterial, addProduct, addProductConfig, updateItem, deleteItem } from '../data/db';
+import { useDB, addSupplier, addClient, addMaterial, addProduct, addProductConfig, updateItem, deleteItem } from '../data/db';
 import { Plus, Tag, Ruler, Droplets, Trash2, Edit2, Package, Users, Box, Boxes, ChevronRight, Info, CheckCircle2, XCircle } from 'lucide-react';
 import DataTable from '../components/DataTable';
 
@@ -16,27 +16,18 @@ const Masters = ({ activeTab }) => {
     setEditId(null);
   }, [activeTab]);
 
-  // Auto-calculation logic for consumption weight
-  useEffect(() => {
-    if (activeTab === 'products' && configData.size && !configEditId) {
-      const numbers = configData.size.match(/\d+/g);
-      if (numbers) {
-        const primaryValue = Math.max(...numbers.map(Number));
-        const weightKg = (primaryValue * 0.04) / 1000;
-        setConfigData(prev => ({ ...prev, consumptionPerPc: weightKg.toFixed(3) }));
-      }
-    }
-  }, [configData.size, activeTab, configEditId]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const storeMap = { suppliers: 'suppliers', materials: 'materials', products: 'products' };
+    const storeMap = { suppliers: 'suppliers', clients: 'clients', materials: 'materials', products: 'products' };
     const store = storeMap[activeTab];
 
     if (editId) {
       await updateItem(store, editId, formData);
     } else {
       if (activeTab === 'suppliers') await addSupplier(formData);
+      if (activeTab === 'clients') await addClient(formData);
       if (activeTab === 'materials') await addMaterial(formData);
       if (activeTab === 'products') await addProduct(formData);
     }
@@ -116,6 +107,73 @@ const Masters = ({ activeTab }) => {
           <div className="card">
             <h3 className="section-title"><Users size={18} color="var(--primary)" /> Supplier Registry</h3>
             <DataTable data={db.suppliers} columns={columns} emptyMessage="No suppliers registered yet." />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderClientTab = () => {
+    const columns = [
+      { header: 'Client Name', key: 'name', sortable: true, filterable: true, render: (val) => <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{val}</span> },
+      { header: 'Phone', key: 'phone', sortable: true, filterable: true, render: (val) => val || '---' },
+      { header: 'Email', key: 'email', sortable: true, filterable: true, render: (val) => val || '---' },
+      { 
+        header: 'Actions', 
+        key: 'id', 
+        sortable: false, 
+        render: (id, row) => (
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn btn-secondary" onClick={() => handleEdit(row)} style={{ padding: '0.4rem', border: '1px solid var(--border)' }}>
+              <Edit2 size={14} color="var(--primary)" />
+            </button>
+            <button className="btn btn-secondary" onClick={() => handleDelete('clients', id)} style={{ padding: '0.4rem', border: '1px solid var(--border)' }}>
+              <Trash2 size={14} color="#ff3b30" />
+            </button>
+          </div>
+        )
+      }
+    ];
+
+    return (
+      <div className="fade-in">
+        <div className="stats-bar">
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: '#e1f0ff' }}><Users size={20} color="#007aff" /></div>
+            <div className="stat-info"><p>Total Clients</p><h3>{db.clients.length}</h3></div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: '#fef7e0' }}><Info size={20} color="#f59e0b" /></div>
+            <div className="stat-info"><p>Active Registry</p><h3>Stable</h3></div>
+          </div>
+        </div>
+
+        <div className="master-grid">
+          <div className="card form-sidebar">
+            <h3 className="section-title">{editId ? <Edit2 size={18} color="var(--primary)" /> : <Plus size={18} color="var(--primary)" />} {editId ? 'Edit Client' : 'Add Client'}</h3>
+            <form onSubmit={handleSubmit}>
+              <div className="input-group">
+                <label>Client / Company Name</label>
+                <input className="input-field" required value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="e.g. Reliance Plastics" />
+              </div>
+              <div className="input-group">
+                <label>Phone Number</label>
+                <input className="input-field" value={formData.phone || ''} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="+91 ..." />
+              </div>
+              <div className="input-group">
+                <label>Email Address</label>
+                <input className="input-field" type="email" value={formData.email || ''} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="contact@client.com" />
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, height: '3rem' }}>{editId ? 'Update Client' : 'Register Client'}</button>
+                {editId && <button type="button" className="btn btn-secondary" onClick={() => { setEditId(null); setFormData({}); }} style={{ padding: '0 1rem' }}>Cancel</button>}
+              </div>
+            </form>
+          </div>
+
+          <div className="card">
+            <h3 className="section-title"><Users size={18} color="var(--primary)" /> Client Registry</h3>
+            <DataTable data={db.clients} columns={columns} emptyMessage="No clients registered yet." />
           </div>
         </div>
       </div>
@@ -309,14 +367,18 @@ const Masters = ({ activeTab }) => {
                       <div className="input-group"><label>Color / Finish</label><input className="input-field" value={configData.color || ''} onChange={(e) => setConfigData({...configData, color: e.target.value})} placeholder="e.g. Transparent Blue" /></div>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                      <div className="input-group"><label>Size / Specification</label><input className="input-field" required value={configData.size || ''} onChange={(e) => setConfigData({...configData, size: e.target.value})} placeholder="1000ml / 28mm" /></div>
+                      <div className="input-group"><label>Capacity / Dimensions</label><input className="input-field" required value={configData.capacity || ''} onChange={(e) => setConfigData({...configData, capacity: e.target.value})} placeholder="e.g. 500ml, 1 Ltr" /></div>
+                      <div className="input-group"><label>Neck Size</label><input className="input-field" value={configData.neckSize || ''} onChange={(e) => setConfigData({...configData, neckSize: e.target.value})} placeholder="e.g. 28mm CTC" /></div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                       <div className="input-group">
-                        <label>Material Consumption</label>
+                        <label>Material Consumption (Weight)</label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <input type="number" step="0.001" className="input-field" required value={configData.consumptionPerPc || ''} onChange={(e) => setConfigData({...configData, consumptionPerPc: e.target.value})} />
                           <span style={{ fontWeight: 600, fontSize: '0.8rem' }}>KG</span>
                         </div>
                       </div>
+                      <div className="input-group"><label>Packaging (Pcs/Box)</label><input type="number" className="input-field" value={configData.packaging || ''} onChange={(e) => setConfigData({...configData, packaging: e.target.value})} placeholder="e.g. 100" /></div>
                     </div>
                     <div className="input-group">
                       <label>Assigned Raw Material</label>
@@ -337,8 +399,10 @@ const Masters = ({ activeTab }) => {
                   <DataTable data={db.productConfigs.filter(c => c.productId === selectedProduct.id)} columns={[
                     { header: 'Config Code', key: 'configCode', sortable: true, render: (val) => <span className="badge badge-blue">{val}</span> },
                     { header: 'Color', key: 'color', render: (val) => val || '---' },
-                    { header: 'Size', key: 'size' },
-                    { header: 'Consumption', key: 'consumptionPerPc', render: (val) => <span style={{ fontWeight: 700 }}>{val} KG</span> },
+                    { header: 'Capacity', key: 'capacity', render: (val) => val || '---' },
+                    { header: 'Neck Size', key: 'neckSize', render: (val) => val || '---' },
+                    { header: 'Weight', key: 'consumptionPerPc', render: (val) => <span style={{ fontWeight: 700 }}>{val} KG</span> },
+                    { header: 'Packaging', key: 'packaging', render: (val) => val ? `${val} pcs` : '---' },
                     { 
                       header: 'Actions', 
                       key: 'id', 
@@ -371,6 +435,7 @@ const Masters = ({ activeTab }) => {
   };
 
   if (activeTab === 'suppliers') return renderSupplierTab();
+  if (activeTab === 'clients') return renderClientTab();
   if (activeTab === 'materials') return renderMaterialTab();
   if (activeTab === 'products') return renderProductTab();
 
