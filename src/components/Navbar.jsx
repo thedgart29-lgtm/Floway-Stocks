@@ -8,7 +8,12 @@ import {
   Settings,
   CircleDot,
   ChevronDown,
-  LayoutDashboard
+  LayoutDashboard,
+  Users,
+  HardHat,
+  Send,
+  AlertTriangle,
+  ArrowUpRight
 } from 'lucide-react';
 
 const Navbar = ({ onOpenTab, activeTabId, user }) => {
@@ -17,16 +22,31 @@ const Navbar = ({ onOpenTab, activeTabId, user }) => {
       title: 'Masters',
       items: [
         { id: 'suppliers', label: 'Suppliers Registry', icon: UserSquare2, desc: 'Manage vendor details' },
+        { id: 'clients', label: 'Client Registry', icon: Users, desc: 'Manage buyer details' },
+        { id: 'workers', label: 'Karigars / Workers', icon: HardHat, desc: 'Manage factory workers' },
         { id: 'materials', label: 'Raw Materials', icon: FileBox, desc: 'Track material types' },
-        { id: 'products', label: 'Product Catalog', icon: Package, desc: 'Bottle configurations' },
+        { id: 'products', label: 'Product Catalog', icon: Package, desc: 'Product configurations' },
       ]
     },
     {
-      title: 'Operations',
+      title: 'Store',
       items: [
-        { id: 'inward', label: 'Material Inward', icon: CircleDot, desc: 'Record stock arrivals' },
+        { id: 'inward', label: 'Material Inward', icon: CircleDot, desc: 'Receive raw materials' },
+        { id: 'issue', label: 'Issue to Factory', icon: Send, desc: 'Issue material to karigars' },
+      ]
+    },
+    {
+      title: 'Factory',
+      items: [
         { id: 'production', label: 'Production Entry', icon: Database, desc: 'Daily line production' },
+        { id: 'loss', label: 'Material Loss', icon: AlertTriangle, desc: 'Record factory wastage' },
         { id: 'history', label: 'Production History', icon: History, desc: 'View past logs' },
+      ]
+    },
+    {
+      title: 'Sales',
+      items: [
+        { id: 'outward', label: 'Outward / Sales', icon: ArrowUpRight, desc: 'Manage sales & dispatch' },
       ]
     }
   ];

@@ -9,7 +9,10 @@ const getInitialDB = () => {
     productConfigs: [],
     productions: [],
     clients: [],
-    outward: []
+    outward: [],
+    workers: [],
+    materialIssues: [],
+    materialLosses: []
   };
 
   const saved = localStorage.getItem('pixivo_db');
@@ -92,31 +95,54 @@ export const addClient = (c) => addItem('clients', c);
 export const addMaterial = (m) => addItem('materials', m);
 export const addProduct = (p) => addItem('products', { ...p, isActive: true });
 export const addProductConfig = (c) => addItem('productConfigs', c);
+export const addWorker = (w) => addItem('workers', w);
 
 // Transaction Wrappers
 export const addMaterialInward = async (entry) => addItem('materialInward', entry);
+export const addMaterialIssue = async (entry) => addItem('materialIssues', entry);
+export const addMaterialLoss = async (entry) => addItem('materialLosses', entry);
 export const addProduction = async (entry) => addItem('productions', entry);
 export const addOutward = async (entry) => addItem('outward', entry);
 
 // Utilities
-export const getMaterialStock = (materialId) => {
+// Store Stock: Total Inward - Total Issued to Factory
+export const getStoreMaterialStock = (materialId) => {
   const inward = (IN_MEMORY_DB.materialInward || []).filter(i => i.materialId === materialId).reduce((sum, i) => sum + Number(i.quantity || 0), 0);
-  
-  const used = (IN_MEMORY_DB.productions || []).reduce((sum, p) => {
-    // New multiple materials structure
-    if (p.materialsUsed && Array.isArray(p.materialsUsed)) {
-      const mat = p.materialsUsed.find(m => m.materialId === materialId);
-      if (mat) return sum + Number(mat.quantityUsed || 0);
-    }
-    // Legacy single material structure
-    if (p.materialId === materialId) {
-      return sum + Number(p.materialUsed || 0);
-    }
-    return sum;
-  }, 0);
-
-  return (inward - used).toFixed(3);
+  const issued = (IN_MEMORY_DB.materialIssues || []).filter(i => i.materialId === materialId).reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+  return (inward - issued).toFixed(3);
 };
+
+// Factory Stock: Total Issued - Total Consumed - Total Loss
+// Can be filtered by workerId. If workerId is omitted, returns total factory WIP.
+export const getFactoryMaterialStock = (materialId, workerId = null) => {
+  const issues = (IN_MEMORY_DB.materialIssues || [])
+    .filter(i => i.materialId === materialId && (!workerId || i.workerId === workerId))
+    .reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+    
+  const consumed = (IN_MEMORY_DB.productions || [])
+    .filter(p => (!workerId || p.workerId === workerId))
+    .reduce((sum, p) => {
+      // New multiple materials structure
+      if (p.materialsUsed && Array.isArray(p.materialsUsed)) {
+        const mat = p.materialsUsed.find(m => m.materialId === materialId);
+        if (mat) return sum + Number(mat.quantityUsed || 0);
+      }
+      // Legacy single material structure
+      if (p.materialId === materialId) {
+        return sum + Number(p.materialUsed || 0);
+      }
+      return sum;
+    }, 0);
+    
+  const losses = (IN_MEMORY_DB.materialLosses || [])
+    .filter(l => l.materialId === materialId && (!workerId || l.workerId === workerId))
+    .reduce((sum, l) => sum + Number(l.quantity || 0), 0);
+    
+  return (issues - consumed - losses).toFixed(3);
+};
+
+// Legacy fallback (alias to store stock)
+export const getMaterialStock = getStoreMaterialStock;
 
 export const getProductStock = (productId) => {
   const produced = (IN_MEMORY_DB.productions || []).filter(p => p.productId === productId).reduce((sum, p) => sum + Number(p.quantity || 0), 0);

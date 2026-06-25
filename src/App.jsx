@@ -16,18 +16,24 @@ import {
   History as HistoryIcon,
   Settings as SettingsIcon,
   Users,
-  ArrowUpRight
+  ArrowUpRight,
+  HardHat,
+  Send,
+  AlertTriangle
 } from 'lucide-react';
 
 // Central registry for tab metadata
 export const TAB_REGISTRY = {
   suppliers: { label: 'Suppliers Registry', icon: UserSquare2 },
   clients: { label: 'Client Registry', icon: Users },
+  workers: { label: 'Karigars / Workers', icon: HardHat },
   materials: { label: 'Raw Materials', icon: FileBox },
   products: { label: 'Product Catalog', icon: Package },
-  inward: { label: 'Material Inward', icon: CircleDot },
-  production: { label: 'Production Entry', icon: Database },
-  outward: { label: 'Outward / Sales', icon: ArrowUpRight },
+  inward: { label: 'Store - Material Inward', icon: CircleDot },
+  issue: { label: 'Store - Issue to Factory', icon: Send },
+  production: { label: 'Factory - Production', icon: Database },
+  loss: { label: 'Factory - Material Loss', icon: AlertTriangle },
+  outward: { label: 'Sales - Outward', icon: ArrowUpRight },
   history: { label: 'Production History', icon: HistoryIcon },
   settings: { label: 'Settings', icon: SettingsIcon },
 };
@@ -117,11 +123,14 @@ function App() {
     switch (currentType) {
       case 'suppliers':
       case 'clients':
+      case 'workers':
       case 'materials':
       case 'products':
         return <Masters activeTab={currentType} />;
       case 'inward':
+      case 'issue':
       case 'production':
+      case 'loss':
       case 'outward':
         return <Production activeTab={currentType} />;
       case 'history':

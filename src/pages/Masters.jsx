@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useDB, addSupplier, addClient, addMaterial, addProduct, addProductConfig, updateItem, deleteItem } from '../data/db';
-import { Plus, Tag, Ruler, Droplets, Trash2, Edit2, Package, Users, Box, Boxes, ChevronRight, Info, CheckCircle2, XCircle } from 'lucide-react';
+import { useDB, addSupplier, addClient, addMaterial, addProduct, addProductConfig, addWorker, updateItem, deleteItem } from '../data/db';
+import { Plus, Tag, Ruler, Droplets, Trash2, Edit2, Package, Users, Box, Boxes, ChevronRight, Info, CheckCircle2, XCircle, HardHat } from 'lucide-react';
 import DataTable from '../components/DataTable';
 
 const Masters = ({ activeTab }) => {
@@ -20,7 +20,7 @@ const Masters = ({ activeTab }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const storeMap = { suppliers: 'suppliers', clients: 'clients', materials: 'materials', products: 'products' };
+    const storeMap = { suppliers: 'suppliers', clients: 'clients', materials: 'materials', products: 'products', workers: 'workers' };
     const store = storeMap[activeTab];
 
     if (editId) {
@@ -30,6 +30,7 @@ const Masters = ({ activeTab }) => {
       if (activeTab === 'clients') await addClient(formData);
       if (activeTab === 'materials') await addMaterial(formData);
       if (activeTab === 'products') await addProduct(formData);
+      if (activeTab === 'workers') await addWorker(formData);
     }
     
     setFormData({});
@@ -44,6 +45,67 @@ const Masters = ({ activeTab }) => {
   const handleDelete = async (store, id) => {
     await deleteItem(store, id);
     if (selectedProduct?.id === id) setSelectedProduct(null);
+  };
+
+  const renderWorkerTab = () => {
+    const columns = [
+      { header: 'Karigar / Worker Name', key: 'name', sortable: true, filterable: true, render: (val) => <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{val}</span> },
+      { header: 'Role/Type', key: 'role', sortable: true, filterable: true, render: (val) => <span className="badge badge-blue">{val || 'Factory Worker'}</span> },
+      { header: 'Phone', key: 'phone', sortable: true, filterable: true, render: (val) => val || '---' },
+      { 
+        header: 'Actions', 
+        key: 'id', 
+        sortable: false, 
+        render: (id, row) => (
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn btn-secondary" onClick={() => handleEdit(row)} style={{ padding: '0.4rem', border: '1px solid var(--border)' }}>
+              <Edit2 size={14} color="var(--primary)" />
+            </button>
+            <button className="btn btn-secondary" onClick={() => handleDelete('workers', id)} style={{ padding: '0.4rem', border: '1px solid var(--border)' }}>
+              <Trash2 size={14} color="#ff3b30" />
+            </button>
+          </div>
+        )
+      }
+    ];
+
+    return (
+      <div className="fade-in">
+        <div className="stats-bar">
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: '#e1f0ff' }}><HardHat size={20} color="#007aff" /></div>
+            <div className="stat-info"><p>Total Karigars</p><h3>{db.workers?.length || 0}</h3></div>
+          </div>
+        </div>
+
+        <div className="master-grid">
+          <div className="card form-sidebar">
+            <h3 className="section-title">{editId ? <Edit2 size={18} color="var(--primary)" /> : <Plus size={18} color="var(--primary)" />} {editId ? 'Edit Karigar' : 'Add Karigar'}</h3>
+            <form onSubmit={handleSubmit}>
+              <div className="input-group">
+                <label>Karigar Name</label>
+                <input className="input-field" required value={formData.name || ''} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="e.g. Ramesh Bhai" />
+              </div>
+              <div className="input-group">
+                <label>Role</label>
+                <input className="input-field" value={formData.role || ''} onChange={(e) => setFormData({...formData, role: e.target.value})} placeholder="e.g. Machine Operator" />
+              </div>
+              <div className="input-group">
+                <label>Phone Number</label>
+                <input className="input-field" value={formData.phone || ''} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="+91 ..." />
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>{editId ? 'Update' : 'Save'}</button>
+                {editId && <button type="button" className="btn btn-secondary" onClick={() => setEditId(null)}>Cancel</button>}
+              </div>
+            </form>
+          </div>
+          <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <DataTable data={db.workers || []} columns={columns} emptyMessage="No Karigars found. Add your first worker." />
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderSupplierTab = () => {
@@ -486,6 +548,7 @@ const Masters = ({ activeTab }) => {
   if (activeTab === 'clients') return renderClientTab();
   if (activeTab === 'materials') return renderMaterialTab();
   if (activeTab === 'products') return renderProductTab();
+  if (activeTab === 'workers') return renderWorkerTab();
 
   return null;
 };

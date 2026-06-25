@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useDB, addMaterialInward, addProduction, addOutward, getMaterialStock, getProductStock, updateItem, deleteItem, getStartOfMonth, getTodayDate } from '../data/db';
-import { Truck, Cpu, Calculator, Hash, Clock, Plus, X, CheckCircle, Package, ArrowDownCircle, ArrowUpRight, Edit2, Trash2 } from 'lucide-react';
+import { useDB, addMaterialInward, addProduction, addOutward, updateItem, deleteItem, getStoreMaterialStock, getFactoryMaterialStock, getProductStock, addMaterialIssue, addMaterialLoss, getStartOfMonth, getTodayDate } from '../data/db';
+import { Plus, X, Search, Calendar, ChevronDown, CheckCircle, Package, Droplets, Ruler, Users, Tag, Box, Info, Clock, Edit2, Trash2, Truck, Cpu, Calculator, Hash, ArrowDownCircle, ArrowUpRight } from 'lucide-react';
 import DataTable from '../components/DataTable';
 
 const Production = ({ activeTab }) => {
@@ -71,18 +71,26 @@ const Production = ({ activeTab }) => {
     e.preventDefault();
     let store = 'productions';
     if (activeTab === 'inward') store = 'materialInward';
+    if (activeTab === 'issue') store = 'materialIssues';
+    if (activeTab === 'loss') store = 'materialLosses';
     if (activeTab === 'outward') store = 'outward';
 
     if (editId) {
-      const updateData = activeTab === 'inward' ? formData : 
-                         activeTab === 'outward' ? { ...formData, totalAmount: Number(calcResult.totalAmount) } :
-                         { ...formData, materialsUsed: calcResult.materialsUsed, batchCode: calcResult.batchCode };
+      const updateData = activeTab === 'outward' ? { ...formData, totalAmount: Number(calcResult.totalAmount) } :
+                         activeTab === 'production' ? { ...formData, materialsUsed: calcResult.materialsUsed, batchCode: calcResult.batchCode } :
+                         formData;
       await updateItem(store, editId, updateData);
-      setSuccessMsg(`${activeTab === 'inward' ? 'Inward' : activeTab === 'outward' ? 'Outward Sales' : 'Production'} Entry Updated!`);
+      setSuccessMsg(`Entry Updated!`);
     } else {
       if (activeTab === 'inward') {
         await addMaterialInward(formData);
         setSuccessMsg('Material Inward Recorded!');
+      } else if (activeTab === 'issue') {
+        await addMaterialIssue(formData);
+        setSuccessMsg('Material Issued to Factory!');
+      } else if (activeTab === 'loss') {
+        await addMaterialLoss(formData);
+        setSuccessMsg('Material Loss Recorded!');
       } else if (activeTab === 'outward') {
         await addOutward({ ...formData, totalAmount: Number(calcResult.totalAmount) });
         setSuccessMsg('Sales / Outward Entry Saved!');
@@ -144,6 +152,71 @@ const Production = ({ activeTab }) => {
     return (
       <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '1rem' }}>
         <DataTable data={filteredData} columns={columns} emptyMessage="No inward records found for this period." />
+      </div>
+    );
+  };
+
+  const getWorkerName = (id) => db.workers?.find(w => w.id === id)?.name || 'Unknown';
+
+  const renderIssueList = () => {
+    const columns = [
+      { header: 'Date', key: 'timestamp', sortable: true, filterable: true, render: (val, row) => <span>{val ? new Date(val).toLocaleDateString() : (row.date || '---')}</span> },
+      { header: 'Worker / Karigar', key: 'workerId', sortable: true, filterable: true, render: (val) => <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{getWorkerName(val)}</span> },
+      { header: 'Material', key: 'materialId', sortable: true, filterable: true, render: (val) => <span style={{ fontWeight: 600 }}>{db.materials.find(m => m.id === val)?.name || 'Unknown'}</span> },
+      { header: 'Issued Qty', key: 'quantity', sortable: true, filterable: true, showTotal: true, render: (val) => <span style={{ fontWeight: 700, color: '#ff9500' }}>-{val} KG</span>, renderTotal: (val) => <span style={{ color: '#ff9500', fontWeight: 800 }}>-{Number(val).toFixed(3)} KG</span> },
+      { 
+        header: 'Actions', 
+        key: 'id', 
+        sortable: false, 
+        render: (id, row) => (
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <button className="btn btn-secondary" onClick={() => handleEdit(row)} style={{ padding: '0.3rem' }}><Edit2 size={12} color="var(--primary)" /></button>
+            <button className="btn btn-secondary" onClick={() => handleDelete('materialIssues', id)} style={{ padding: '0.3rem' }}><Trash2 size={12} color="#ff3b30" /></button>
+          </div>
+        )
+      }
+    ];
+
+    const filteredData = (db.materialIssues || []).filter(item => {
+      const itemDate = item.date || (item.timestamp ? new Date(item.timestamp).toISOString().split('T')[0] : '');
+      return itemDate >= dateRange.start && itemDate <= dateRange.end;
+    });
+
+    return (
+      <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '1rem' }}>
+        <DataTable data={filteredData} columns={columns} emptyMessage="No material issues found for this period." />
+      </div>
+    );
+  };
+
+  const renderLossList = () => {
+    const columns = [
+      { header: 'Date', key: 'timestamp', sortable: true, filterable: true, render: (val, row) => <span>{val ? new Date(val).toLocaleDateString() : (row.date || '---')}</span> },
+      { header: 'Worker / Karigar', key: 'workerId', sortable: true, filterable: true, render: (val) => <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{getWorkerName(val)}</span> },
+      { header: 'Material', key: 'materialId', sortable: true, filterable: true, render: (val) => <span style={{ fontWeight: 600 }}>{db.materials.find(m => m.id === val)?.name || 'Unknown'}</span> },
+      { header: 'Lost Qty', key: 'quantity', sortable: true, filterable: true, showTotal: true, render: (val) => <span style={{ fontWeight: 700, color: '#ff3b30' }}>-{val} KG</span>, renderTotal: (val) => <span style={{ color: '#ff3b30', fontWeight: 800 }}>-{Number(val).toFixed(3)} KG</span> },
+      { header: 'Reason', key: 'reason', render: (val) => <span style={{ fontSize: '0.85rem' }}>{val}</span> },
+      { 
+        header: 'Actions', 
+        key: 'id', 
+        sortable: false, 
+        render: (id, row) => (
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <button className="btn btn-secondary" onClick={() => handleEdit(row)} style={{ padding: '0.3rem' }}><Edit2 size={12} color="var(--primary)" /></button>
+            <button className="btn btn-secondary" onClick={() => handleDelete('materialLosses', id)} style={{ padding: '0.3rem' }}><Trash2 size={12} color="#ff3b30" /></button>
+          </div>
+        )
+      }
+    ];
+
+    const filteredData = (db.materialLosses || []).filter(item => {
+      const itemDate = item.date || (item.timestamp ? new Date(item.timestamp).toISOString().split('T')[0] : '');
+      return itemDate >= dateRange.start && itemDate <= dateRange.end;
+    });
+
+    return (
+      <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '1rem' }}>
+        <DataTable data={filteredData} columns={columns} emptyMessage="No material losses recorded for this period." />
       </div>
     );
   };
@@ -280,7 +353,7 @@ const Production = ({ activeTab }) => {
                 </div>
               </div>
 
-              {activeTab === 'inward' ? (
+              {activeTab === 'inward' && (
                 <>
                   <div className="input-group">
                     <label>Select Supplier</label>
@@ -295,7 +368,7 @@ const Production = ({ activeTab }) => {
                       <option value="">-- Choose Material --</option>
                       {db.materials.map(m => (
                         <option key={m.id} value={m.id}>
-                          {m.name} ({m.code}) - Stock: {getMaterialStock(m.id)} KG
+                          {m.name} ({m.code})
                         </option>
                       ))}
                     </select>
@@ -305,7 +378,67 @@ const Production = ({ activeTab }) => {
                     <input type="number" step="0.01" className="input-field" required value={formData.quantity || ''} onChange={(e) => setFormData({...formData, quantity: e.target.value})} placeholder="0.00" />
                   </div>
                 </>
-              ) : activeTab === 'outward' ? (
+              )}
+
+              {activeTab === 'issue' && (
+                <>
+                  <div className="input-group">
+                    <label>Issue To (Karigar)</label>
+                    <select className="input-field" required value={formData.workerId || ''} onChange={(e) => setFormData({...formData, workerId: e.target.value})}>
+                      <option value="">-- Select Worker --</option>
+                      {(db.workers || []).map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="input-group">
+                    <label>Select Material</label>
+                    <select className="input-field" required value={formData.materialId || ''} onChange={(e) => setFormData({...formData, materialId: e.target.value})}>
+                      <option value="">-- Choose Material --</option>
+                      {db.materials.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} (Store Stock: {getStoreMaterialStock(m.id)} KG)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="input-group">
+                    <label>Quantity Issued (KG)</label>
+                    <input type="number" step="0.01" className="input-field" required value={formData.quantity || ''} onChange={(e) => setFormData({...formData, quantity: e.target.value})} placeholder="0.00" />
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'loss' && (
+                <>
+                  <div className="input-group">
+                    <label>Factory Karigar</label>
+                    <select className="input-field" required value={formData.workerId || ''} onChange={(e) => setFormData({...formData, workerId: e.target.value})}>
+                      <option value="">-- Select Worker --</option>
+                      {(db.workers || []).map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="input-group">
+                    <label>Lost Material</label>
+                    <select className="input-field" required value={formData.materialId || ''} onChange={(e) => setFormData({...formData, materialId: e.target.value})}>
+                      <option value="">-- Choose Material --</option>
+                      {db.materials.map(m => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} (WIP Stock: {formData.workerId ? getFactoryMaterialStock(m.id, formData.workerId) : getFactoryMaterialStock(m.id)} KG)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="input-group">
+                    <label>Quantity Lost (KG)</label>
+                    <input type="number" step="0.01" className="input-field" required value={formData.quantity || ''} onChange={(e) => setFormData({...formData, quantity: e.target.value})} placeholder="0.00" />
+                  </div>
+                  <div className="input-group">
+                    <label>Reason for Loss</label>
+                    <input type="text" className="input-field" required value={formData.reason || ''} onChange={(e) => setFormData({...formData, reason: e.target.value})} placeholder="e.g. Machine fault, Burned, etc." />
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'outward' && (
                 <>
                   <div className="input-group">
                     <label>Select Client</label>
@@ -342,8 +475,17 @@ const Production = ({ activeTab }) => {
                     </div>
                   </div>
                 </>
-              ) : (
+              )}
+
+              {activeTab === 'production' && (
                 <>
+                  <div className="input-group">
+                    <label>Produced By (Karigar)</label>
+                    <select className="input-field" required value={formData.workerId || ''} onChange={(e) => setFormData({...formData, workerId: e.target.value})}>
+                      <option value="">-- Select Worker --</option>
+                      {(db.workers || []).map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                  </div>
                   <div className="input-group">
                     <label>Choose Product</label>
                     <select className="input-field" required value={formData.productId || ''} onChange={(e) => setFormData({...formData, productId: e.target.value, configId: ''})}>
@@ -389,7 +531,7 @@ const Production = ({ activeTab }) => {
                 </>
               )}
               <button type="submit" className="btn btn-primary" style={{ width: '100%', height: '3.5rem', fontSize: '1rem' }}>
-                {editId ? 'Update Entry' : `Save ${activeTab === 'inward' ? 'Inward Record' : activeTab === 'outward' ? 'Sales Record' : 'Production Entry'}`}
+                {editId ? 'Update Entry' : `Save ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Record`}
               </button>
             </form>
           </div>
@@ -411,15 +553,27 @@ const Production = ({ activeTab }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800 }}>
-            {activeTab === 'inward' ? 'Material Inward' : activeTab === 'outward' ? 'Product Sales (Outward)' : 'Production Manager'}
+            {activeTab === 'inward' ? 'Store - Material Inward' :
+             activeTab === 'issue' ? 'Store - Issue Material' :
+             activeTab === 'production' ? 'Factory - Production Entry' :
+             activeTab === 'loss' ? 'Factory - Material Loss' :
+             'Product Sales (Outward)'}
           </h1>
           <p style={{ color: 'var(--text-secondary)' }}>
-            {activeTab === 'inward' ? 'Track raw material stock arrivals' : activeTab === 'outward' ? 'Manage product sales and deliveries' : 'Monitor factory production lines'}
+            {activeTab === 'inward' ? 'Track raw material arriving from suppliers' :
+             activeTab === 'issue' ? 'Issue raw material to factory karigars' :
+             activeTab === 'production' ? 'Log produced items by karigars' :
+             activeTab === 'loss' ? 'Log wasted or damaged material in factory' :
+             'Manage product sales and deliveries'}
           </p>
         </div>
         <button className="btn btn-primary" onClick={handleOpenModal}>
           <Plus size={20} />
-          {activeTab === 'inward' ? 'New Material Inward' : activeTab === 'outward' ? 'New Sales Entry' : 'New Production Entry'}
+          {activeTab === 'inward' ? 'New Material Inward' :
+           activeTab === 'issue' ? 'Issue Material' :
+           activeTab === 'production' ? 'New Production Entry' :
+           activeTab === 'loss' ? 'Log Material Loss' :
+           'New Sales Entry'}
         </button>
       </div>
 
@@ -475,12 +629,15 @@ const Production = ({ activeTab }) => {
             );
           })
         ) : (
-          // Display Material Stocks for Production / Inward
+          // Display Material Stocks for Store or Factory
           db.materials.slice(0, 4).map(m => {
-            const stock = Number(getMaterialStock(m.id));
+            const isFactory = activeTab === 'production' || activeTab === 'loss';
+            const stock = Number(isFactory ? getFactoryMaterialStock(m.id) : getStoreMaterialStock(m.id));
             return (
               <div key={m.id} className="card" style={{ padding: '1rem' }}>
-                 <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{m.name}</p>
+                 <p style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+                   {isFactory ? 'WIP ' : 'STORE '} {m.name}
+                 </p>
                  <h2 style={{ fontSize: '1.25rem', marginTop: '0.2rem' }}>{stock} <span style={{ fontSize: '0.8rem', fontWeight: 400 }}>KG</span></h2>
                  <div className={`stock-indicator ${stock < 10 ? 'stock-low' : ''}`}>
                    {stock < 10 ? 'Low Stock' : 'In Stock'}
@@ -491,7 +648,11 @@ const Production = ({ activeTab }) => {
         )}
       </div>
 
-      {activeTab === 'inward' ? renderInwardList() : activeTab === 'outward' ? renderOutwardList() : renderProductionList()}
+      {activeTab === 'inward' ? renderInwardList() :
+       activeTab === 'issue' ? renderIssueList() :
+       activeTab === 'production' ? renderProductionList() :
+       activeTab === 'loss' ? renderLossList() :
+       renderOutwardList()}
       {renderModal()}
     </div>
   );
