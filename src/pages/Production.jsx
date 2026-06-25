@@ -7,7 +7,7 @@ import DataTable from '../components/DataTable';
 const Production = ({ activeTab }) => {
   const db = useDB();
   const [formData, setFormData] = useState({});
-  const [calcResult, setCalcResult] = useState({ usage: 0, batchCode: '', totalAmount: 0 });
+  const [calcResult, setCalcResult] = useState({ materialsUsed: [], batchCode: '', totalAmount: 0 });
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
@@ -27,13 +27,20 @@ const Production = ({ activeTab }) => {
     if (activeTab === 'production' && formData.productId && formData.configId && formData.quantity) {
       const config = db.productConfigs.find(c => c.id === formData.configId);
       const product = db.products.find(p => p.id === formData.productId);
-      const material = db.materials.find(m => m.id === config?.materialId);
       
-      const usage = (Number(formData.quantity) * Number(config?.consumptionPerPc || 0)).toFixed(3);
+      const materialsUsed = (config?.materials || []).map(m => {
+        const mat = db.materials.find(mat => mat.id === m.materialId);
+        return {
+          materialId: m.materialId,
+          name: mat?.name || 'Unknown',
+          quantityUsed: (Number(formData.quantity) * Number(m.consumptionPerPc || 0)).toFixed(3)
+        };
+      });
+      
       const serial = (editId ? db.productions.find(p => p.id === editId)?.batchCode.split('-').pop() : (db.productions.length + 1).toString().padStart(4, '0'));
-      const batchCode = `${product?.code || 'PRD'}-${config?.configCode || 'XXX'}-${material?.code || 'MAT'}-${serial}`;
+      const batchCode = `${product?.code || 'PRD'}-${config?.configCode || 'XXX'}-BOM-${serial}`;
       
-      setCalcResult(prev => ({ ...prev, usage, batchCode }));
+      setCalcResult(prev => ({ ...prev, materialsUsed, batchCode }));
     } else if (activeTab === 'outward' && formData.quantity && formData.rate) {
       const totalAmount = (Number(formData.quantity) * Number(formData.rate)).toFixed(2);
       setCalcResult(prev => ({ ...prev, totalAmount }));
@@ -69,7 +76,7 @@ const Production = ({ activeTab }) => {
     if (editId) {
       const updateData = activeTab === 'inward' ? formData : 
                          activeTab === 'outward' ? { ...formData, totalAmount: Number(calcResult.totalAmount) } :
-                         { ...formData, materialUsed: Number(calcResult.usage), batchCode: calcResult.batchCode };
+                         { ...formData, materialsUsed: calcResult.materialsUsed, batchCode: calcResult.batchCode };
       await updateItem(store, editId, updateData);
       setSuccessMsg(`${activeTab === 'inward' ? 'Inward' : activeTab === 'outward' ? 'Outward Sales' : 'Production'} Entry Updated!`);
     } else {
@@ -80,7 +87,7 @@ const Production = ({ activeTab }) => {
         await addOutward({ ...formData, totalAmount: Number(calcResult.totalAmount) });
         setSuccessMsg('Sales / Outward Entry Saved!');
       } else {
-        await addProduction({ ...formData, materialUsed: Number(calcResult.usage), batchCode: calcResult.batchCode });
+        await addProduction({ ...formData, materialsUsed: calcResult.materialsUsed, batchCode: calcResult.batchCode });
         setSuccessMsg('Production Entry Saved!');
       }
     }
@@ -160,7 +167,18 @@ const Production = ({ activeTab }) => {
       { header: 'Batch Code', key: 'batchCode', sortable: true, filterable: true, render: (val) => <span className="badge badge-blue">{val}</span> },
       { header: 'Product', key: 'productId', sortable: true, filterable: true, render: (val) => <span style={{ fontWeight: 600 }}>{getProductName(val)}</span> },
       { header: 'Quantity (PCS)', key: 'quantity', sortable: true, filterable: true, showTotal: true, render: (val) => <span style={{ fontWeight: 700 }}>{val}</span> },
-      { header: 'Material Used', key: 'materialUsed', sortable: true, filterable: true, showTotal: true, render: (val) => <span style={{ color: '#ff3b30', fontWeight: 600 }}>-{val} KG</span>, renderTotal: (val) => <span style={{ color: '#ff3b30', fontWeight: 800 }}>-{Number(val).toFixed(3)} KG</span> },
+      { 
+        header: 'Materials Used (BOM)', 
+        key: 'materialsUsed', 
+        render: (materials) => {
+          if (!materials || !Array.isArray(materials)) return '---';
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              {materials.map((m, i) => <span key={i} style={{ color: '#ff3b30', fontSize: '0.75rem', fontWeight: 600 }}>{m.name}: -{m.quantityUsed} KG</span>)}
+            </div>
+          );
+        }
+      },
       { 
         header: 'Actions', 
         key: 'id', 
@@ -328,7 +346,7 @@ const Production = ({ activeTab }) => {
                       <option value="">-- Choose Config --</option>
                       {configs.map(c => (
                         <option key={c.id} value={c.id}>
-                          {c.configCode} - {c.color || 'Plain'} ({c.size}) | Stock: {getMaterialStock(c.materialId)} KG
+                          {c.configCode} - {c.color || 'Plain'} (BOM: {c.materials?.length || 0} items)
                         </option>
                       ))}
                     </select>
@@ -339,10 +357,17 @@ const Production = ({ activeTab }) => {
                   </div>
 
                   <div className="card" style={{ background: '#f0f7ff', border: '1px solid #007aff', marginBottom: '1.5rem', boxShadow: 'none' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                        <div>
-                         <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#007aff' }}>ESTIMATED USAGE</p>
-                         <h3 style={{ fontSize: '1.5rem' }}>{calcResult.usage} KG</h3>
+                         <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#007aff', marginBottom: '0.5rem' }}>ESTIMATED BOM USAGE</p>
+                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                           {(calcResult.materialsUsed || []).map((m, i) => (
+                             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', width: '250px' }}>
+                               <span style={{ fontSize: '0.85rem' }}>{m.name}</span>
+                               <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{m.quantityUsed} KG</span>
+                             </div>
+                           ))}
+                         </div>
                        </div>
                        <div style={{ textAlign: 'right' }}>
                          <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>BATCH CODE</p>

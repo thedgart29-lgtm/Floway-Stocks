@@ -273,18 +273,46 @@ const Masters = ({ activeTab }) => {
   const renderProductTab = () => {
     const handleConfigSubmit = async (e) => {
       e.preventDefault();
-      if (configEditId) {
-        await updateItem('productConfigs', configEditId, configData);
-      } else {
-        await addProductConfig({ ...configData, productId: selectedProduct.id });
+      // Ensure at least one material is added
+      const mats = configData.materials?.filter(m => m.materialId && m.consumptionPerPc) || [];
+      if (mats.length === 0) {
+        alert("Please assign at least one raw material with consumption weight.");
+        return;
       }
-      setConfigData({});
+      const dataToSave = { ...configData, materials: mats };
+      
+      if (configEditId) {
+        await updateItem('productConfigs', configEditId, dataToSave);
+      } else {
+        await addProductConfig({ ...dataToSave, productId: selectedProduct.id });
+      }
+      setConfigData({ materials: [{ materialId: '', consumptionPerPc: '' }] });
       setConfigEditId(null);
     };
 
     const handleConfigEdit = (item) => {
-      setConfigData(item);
+      setConfigData({ ...item, materials: item.materials?.length ? item.materials : [{ materialId: '', consumptionPerPc: '' }] });
       setConfigEditId(item.id);
+    };
+
+    const addMaterialToConfig = () => {
+      setConfigData({
+        ...configData,
+        materials: [...(configData.materials || []), { materialId: '', consumptionPerPc: '' }]
+      });
+    };
+
+    const updateConfigMaterial = (index, field, value) => {
+      const updated = [...(configData.materials || [])];
+      if (!updated[index]) updated[index] = { materialId: '', consumptionPerPc: '' };
+      updated[index][field] = value;
+      setConfigData({ ...configData, materials: updated });
+    };
+
+    const removeConfigMaterial = (index) => {
+      const updated = [...(configData.materials || [])];
+      updated.splice(index, 1);
+      setConfigData({ ...configData, materials: updated });
     };
 
     return (
@@ -366,26 +394,35 @@ const Masters = ({ activeTab }) => {
                       <div className="input-group"><label>Config Code (e.g. BLU)</label><input className="input-field" required value={configData.configCode || ''} onChange={(e) => setConfigData({...configData, configCode: e.target.value.toUpperCase()})} /></div>
                       <div className="input-group"><label>Color / Finish</label><input className="input-field" value={configData.color || ''} onChange={(e) => setConfigData({...configData, color: e.target.value})} placeholder="e.g. Transparent Blue" /></div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                      <div className="input-group"><label>Capacity / Dimensions</label><input className="input-field" required value={configData.capacity || ''} onChange={(e) => setConfigData({...configData, capacity: e.target.value})} placeholder="e.g. 500ml, 1 Ltr" /></div>
-                      <div className="input-group"><label>Neck Size</label><input className="input-field" value={configData.neckSize || ''} onChange={(e) => setConfigData({...configData, neckSize: e.target.value})} placeholder="e.g. 28mm CTC" /></div>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                      <div className="input-group">
-                        <label>Material Consumption (Weight)</label>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <input type="number" step="0.001" className="input-field" required value={configData.consumptionPerPc || ''} onChange={(e) => setConfigData({...configData, consumptionPerPc: e.target.value})} />
-                          <span style={{ fontWeight: 600, fontSize: '0.8rem' }}>KG</span>
-                        </div>
+                    
+                    <div style={{ marginTop: '1.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                        <label style={{ margin: 0, fontSize: '0.9rem' }}>Bill of Materials (BOM)</label>
+                        <button type="button" onClick={addMaterialToConfig} className="btn btn-secondary btn-tiny" style={{ padding: '0.3rem 0.6rem' }}>
+                          <Plus size={14} /> Add Material
+                        </button>
                       </div>
-                      <div className="input-group"><label>Packaging (Pcs/Box)</label><input type="number" className="input-field" value={configData.packaging || ''} onChange={(e) => setConfigData({...configData, packaging: e.target.value})} placeholder="e.g. 100" /></div>
-                    </div>
-                    <div className="input-group">
-                      <label>Assigned Raw Material</label>
-                      <select className="input-field" required value={configData.materialId || ''} onChange={(e) => setConfigData({...configData, materialId: e.target.value})}>
-                        <option value="">Select Material</option>
-                        {db.materials.map(m => <option key={m.id} value={m.id}>{m.name} ({m.code})</option>)}
-                      </select>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {(configData.materials || [{ materialId: '', consumptionPerPc: '' }]).map((mat, index) => (
+                          <div key={index} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', background: '#f9f9fb', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                            <div className="input-group" style={{ flex: 2, marginBottom: 0 }}>
+                              <label style={{ fontSize: '0.75rem' }}>Raw Material</label>
+                              <select className="input-field" required value={mat.materialId || ''} onChange={(e) => updateConfigMaterial(index, 'materialId', e.target.value)}>
+                                <option value="">Select Material</option>
+                                {db.materials.map(m => <option key={m.id} value={m.id}>{m.name} ({m.code})</option>)}
+                              </select>
+                            </div>
+                            <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+                              <label style={{ fontSize: '0.75rem' }}>Consumption (KG)</label>
+                              <input type="number" step="0.001" className="input-field" required value={mat.consumptionPerPc || ''} onChange={(e) => updateConfigMaterial(index, 'consumptionPerPc', e.target.value)} placeholder="0.000" />
+                            </div>
+                            <button type="button" className="btn btn-secondary" onClick={() => removeConfigMaterial(index)} style={{ padding: '0.6rem', border: '1px solid var(--border)', height: '42px' }} disabled={(configData.materials?.length || 1) <= 1}>
+                              <Trash2 size={16} color={(configData.materials?.length || 1) <= 1 ? "var(--border)" : "#ff3b30"} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                     <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                       <button type="submit" className="btn btn-primary" style={{ flex: 1, height: '3.5rem', fontSize: '1rem' }}>{configEditId ? 'Update Configuration' : 'Assign Configuration'}</button>
@@ -399,10 +436,21 @@ const Masters = ({ activeTab }) => {
                   <DataTable data={db.productConfigs.filter(c => c.productId === selectedProduct.id)} columns={[
                     { header: 'Config Code', key: 'configCode', sortable: true, render: (val) => <span className="badge badge-blue">{val}</span> },
                     { header: 'Color', key: 'color', render: (val) => val || '---' },
-                    { header: 'Capacity', key: 'capacity', render: (val) => val || '---' },
-                    { header: 'Neck Size', key: 'neckSize', render: (val) => val || '---' },
-                    { header: 'Weight', key: 'consumptionPerPc', render: (val) => <span style={{ fontWeight: 700 }}>{val} KG</span> },
-                    { header: 'Packaging', key: 'packaging', render: (val) => val ? `${val} pcs` : '---' },
+                    { 
+                      header: 'Materials (BOM)', 
+                      key: 'materials', 
+                      render: (materials) => {
+                        if (!materials || materials.length === 0) return '---';
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                            {materials.map((m, i) => {
+                              const matName = db.materials.find(x => x.id === m.materialId)?.name || 'Unknown';
+                              return <span key={i} style={{ fontSize: '0.75rem', background: '#f2f2f7', padding: '2px 6px', borderRadius: '4px' }}>{matName}: <b>{m.consumptionPerPc} KG</b></span>
+                            })}
+                          </div>
+                        );
+                      }
+                    },
                     { 
                       header: 'Actions', 
                       key: 'id', 

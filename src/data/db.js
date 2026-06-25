@@ -101,12 +101,25 @@ export const addOutward = async (entry) => addItem('outward', entry);
 // Utilities
 export const getMaterialStock = (materialId) => {
   const inward = (IN_MEMORY_DB.materialInward || []).filter(i => i.materialId === materialId).reduce((sum, i) => sum + Number(i.quantity || 0), 0);
-  const used = (IN_MEMORY_DB.productions || []).filter(p => p.materialId === materialId).reduce((sum, p) => sum + Number(p.materialUsed || 0), 0);
+  
+  const used = (IN_MEMORY_DB.productions || []).reduce((sum, p) => {
+    // New multiple materials structure
+    if (p.materialsUsed && Array.isArray(p.materialsUsed)) {
+      const mat = p.materialsUsed.find(m => m.materialId === materialId);
+      if (mat) return sum + Number(mat.quantityUsed || 0);
+    }
+    // Legacy single material structure
+    if (p.materialId === materialId) {
+      return sum + Number(p.materialUsed || 0);
+    }
+    return sum;
+  }, 0);
+
   return (inward - used).toFixed(3);
 };
 
 export const getProductStock = (productId) => {
-  const produced = (IN_MEMORY_DB.productions || []).filter(p => p.productId === productId).reduce((sum, p) => sum + Number(p.totalPcs || 0), 0);
+  const produced = (IN_MEMORY_DB.productions || []).filter(p => p.productId === productId).reduce((sum, p) => sum + Number(p.quantity || 0), 0);
   const sold = (IN_MEMORY_DB.outward || []).filter(o => o.productId === productId).reduce((sum, o) => sum + Number(o.quantity || 0), 0);
   return produced - sold;
 };
