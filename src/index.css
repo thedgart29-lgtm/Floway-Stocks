@@ -295,8 +295,7 @@ body {
   overflow: auto;
   margin-top: 1rem;
   flex: 1;
-  max-height: calc(100vh - 300px);
-  min-height: 300px;
+  min-height: 0;
   background: white;
   border-radius: var(--radius);
   border: 1px solid var(--border);
@@ -306,6 +305,12 @@ body {
 table {
   width: 100%;
   border-collapse: collapse;
+  height: 100%; /* Stretches the table to fill the container */
+}
+
+/* Force data rows to only take up as much space as they need */
+.datatable-data-row {
+  height: 1px;
 }
 
 thead th {

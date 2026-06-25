@@ -142,7 +142,7 @@ const Production = ({ activeTab }) => {
     });
 
     return (
-      <div className="card">
+      <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '1rem' }}>
         <DataTable data={filteredData} columns={columns} emptyMessage="No inward records found for this period." />
       </div>
     );
@@ -209,7 +209,7 @@ const Production = ({ activeTab }) => {
     });
 
     return (
-      <div className="card">
+      <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '1rem' }}>
         <DataTable data={filteredData} columns={columns} emptyMessage="No production records found for this period." />
       </div>
     );
@@ -242,7 +242,7 @@ const Production = ({ activeTab }) => {
     });
 
     return (
-      <div className="card">
+      <div className="card" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '1rem' }}>
         <DataTable data={filteredData} columns={columns} emptyMessage="No sales records found for this period." />
       </div>
     );
@@ -400,7 +400,7 @@ const Production = ({ activeTab }) => {
   };
 
   return (
-    <div className="fade-in">
+    <div className="fade-in" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {successMsg && (
         <div className="toast-success">
           <CheckCircle size={20} />

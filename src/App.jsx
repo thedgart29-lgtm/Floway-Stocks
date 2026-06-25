@@ -150,11 +150,13 @@ function App() {
       
       <main style={{ 
         flex: 1, 
-        overflowY: 'auto',
+        overflowY: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
         background: 'var(--bg-app)',
         padding: '1.2rem 1.5rem'
       }}>
-        <div style={{ width: '100%' }}>
+        <div style={{ width: '100%', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           {renderContent()}
         </div>
       </main>

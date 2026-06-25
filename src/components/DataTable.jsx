@@ -245,18 +245,23 @@ const DataTable = ({ data = [], columns = [], emptyMessage = 'No records found.'
         </thead>
         <tbody>
           {processedData.length > 0 ? (
-            processedData.map((row, rowIdx) => (
-              <tr key={row.id || rowIdx}>
-                {columns.map((col, colIdx) => (
-                  <td 
-                    key={colIdx}
-                    onContextMenu={(e) => handleContextMenu(e, col.key)}
-                  >
-                    {col.render ? col.render(row[col.key], row) : row[col.key]}
-                  </td>
-                ))}
+            <>
+              {processedData.map((row, rowIdx) => (
+                <tr key={row.id || rowIdx} className="datatable-data-row">
+                  {columns.map((col, colIdx) => (
+                    <td 
+                      key={colIdx}
+                      onContextMenu={(e) => handleContextMenu(e, col.key)}
+                    >
+                      {col.render ? col.render(row[col.key], row) : row[col.key]}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              <tr className="datatable-filler-row">
+                <td colSpan={columns.length} style={{ padding: 0, border: 'none', height: '100%' }}></td>
               </tr>
-            ))
+            </>
           ) : (
             <tr>
               <td colSpan={columns.length} className="datatable-empty-state">
