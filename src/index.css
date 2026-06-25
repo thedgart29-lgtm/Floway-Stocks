@@ -312,15 +312,30 @@ table {
   flex-direction: column;
 }
 
-thead, tfoot {
+thead {
   flex-shrink: 0;
   z-index: 10;
+}
+
+tfoot {
+  flex-shrink: 0;
+  z-index: 10;
+  position: sticky;
+  bottom: 0;
+  background: white;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+}
+
+tfoot td {
+  background: #f8f9fa;
+  border-top: 2px solid var(--primary);
 }
 
 tbody {
   flex: 1; /* Fills remaining space */
   display: flex;
   flex-direction: column;
+  overflow-y: auto; /* Make body scrollable */
 }
 
 tr {

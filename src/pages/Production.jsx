@@ -170,6 +170,17 @@ const Production = ({ activeTab }) => {
       { 
         header: 'Materials Used (BOM)', 
         key: 'materialsUsed', 
+        showTotal: true,
+        calcTotal: (data) => {
+          let totalKg = 0;
+          data.forEach(row => {
+            if (Array.isArray(row.materialsUsed)) {
+              row.materialsUsed.forEach(m => totalKg += Number(m.quantityUsed || 0));
+            }
+          });
+          return totalKg;
+        },
+        renderTotal: (val) => <span style={{ color: '#ff3b30', fontWeight: 800 }}>-{Number(val).toFixed(3)} KG</span>,
         render: (materials) => {
           if (!materials || !Array.isArray(materials)) return '---';
           return (

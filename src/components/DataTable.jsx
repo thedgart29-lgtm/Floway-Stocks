@@ -141,7 +141,11 @@ const DataTable = ({ data = [], columns = [], emptyMessage = 'No records found.'
     const result = {};
     columns.forEach(col => {
       if (col.showTotal) {
-        result[col.key] = processedData.reduce((acc, row) => acc + (Number(row[col.key]) || 0), 0);
+        if (col.calcTotal) {
+          result[col.key] = col.calcTotal(processedData);
+        } else {
+          result[col.key] = processedData.reduce((acc, row) => acc + (Number(row[col.key]) || 0), 0);
+        }
       }
     });
     return result;
