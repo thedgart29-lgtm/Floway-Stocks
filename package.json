@@ -54,8 +54,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "pixivoin",
-        "repo": "Pixivo-Backend"
+        "owner": "thedgart29-lgtm",
+        "repo": "Floway-Stocks"
       }
     ],
     "files": [
