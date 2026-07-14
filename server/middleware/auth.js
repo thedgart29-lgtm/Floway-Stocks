@@ -1,3 +1,4 @@
+/* global process */
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-bottle-key-123';
@@ -16,7 +17,7 @@ export const verifyAuth = (req, res, next) => {
     req.user = decoded;
     
     next();
-  } catch (error) {
+  } catch {
     return res.status(401).json({ error: 'Unauthorized: Token expired or invalid' });
   }
 };

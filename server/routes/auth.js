@@ -1,3 +1,4 @@
+/* global process */
 import express from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
@@ -84,7 +85,7 @@ router.post('/request-otp', async (req, res) => {
   let previewUrl = null;
   try {
     previewUrl = await sendOTP(email, otp);
-  } catch (e) {
+  } catch {
     console.log('Email send failed (dev mode), OTP is:', otp);
   }
 

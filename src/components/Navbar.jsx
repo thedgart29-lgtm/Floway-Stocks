@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   Database, 
   Package, 
@@ -13,10 +12,13 @@ import {
   HardHat,
   Send,
   AlertTriangle,
-  ArrowUpRight
+  ArrowUpRight,
+  Sun,
+  Moon,
+  LogOut
 } from 'lucide-react';
 
-const Navbar = ({ onOpenTab, activeTabId, user }) => {
+const Navbar = ({ onOpenTab, activeTabId, user, theme, toggleTheme, onLogout }) => {
   const menus = [
     {
       title: 'Masters',
@@ -46,20 +48,30 @@ const Navbar = ({ onOpenTab, activeTabId, user }) => {
     {
       title: 'Sales',
       items: [
-        { id: 'outward', label: 'Outward / Sales', icon: ArrowUpRight, desc: 'Manage sales & dispatch' },
+        { id: 'outward', label: 'Delivery Challan (Outward)', icon: ArrowUpRight, desc: 'Manage dispatches' },
+        { id: 'billing', label: 'Sales Invoices (Billing)', icon: ArrowUpRight, desc: 'Generate bills & payments' },
+        { id: 'payments', label: 'Payment Entry', icon: ArrowUpRight, desc: 'Record bill & direct cash payments' },
+        { id: 'outstanding', label: 'Outstanding Report', icon: ArrowUpRight, desc: 'Track pending dues & collections' },
       ]
     }
   ];
-
-  const handleLogoClick = () => {
-    onOpenTab('suppliers');
-  };
 
   return (
     <nav className="navbar">
       {/* Branding Removed */}
 
       <div className="nav-menu">
+        <div className="nav-item">
+          <div 
+            className={`nav-link ${activeTabId === 'dashboard' ? 'active' : ''}`} 
+            onClick={() => onOpenTab('dashboard')}
+            style={{ cursor: 'pointer', padding: '0.8rem 1rem' }}
+          >
+            <LayoutDashboard size={16} style={{ marginRight: '0.5rem' }} />
+            Dashboard
+          </div>
+        </div>
+        
         {menus.map((menu) => (
           <div key={menu.title} className="nav-item">
             <div className={`nav-link ${menu.items.some(i => i.id === activeTabId) ? 'active' : ''}`}>
@@ -85,9 +97,6 @@ const Navbar = ({ onOpenTab, activeTabId, user }) => {
                   className={`dropdown-item ${activeTabId === item.id ? 'active' : ''}`}
                   onClick={() => onOpenTab(item.id)}
                 >
-                  <div className="dropdown-item-icon">
-                    <item.icon size={14} />
-                  </div>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: '0.8rem' }}>{item.label}</div>
                     <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>{item.desc}</div>
@@ -99,29 +108,34 @@ const Navbar = ({ onOpenTab, activeTabId, user }) => {
         ))}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ textAlign: 'right' }}>
-           <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>{user?.username}</div>
-           <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>{user?.role}</div>
-        </div>
-        
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <button 
+          className="btn btn-secondary" 
+          onClick={toggleTheme} 
+          style={{ padding: '0.5rem', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
+          title={theme === 'light' ? "Switch to Dark Mode" : "Switch to Light Mode"}
+        >
+          {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+        </button>
+
         {user?.role === 'ADMIN' && (
           <button 
             className="btn btn-secondary" 
             onClick={() => onOpenTab('settings')} 
-            style={{ padding: '0.5rem', borderRadius: '50%', width: '36px', height: '36px' }} 
+            style={{ padding: '0.5rem', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
             title="Admin Settings"
           >
             <Settings size={18} />
           </button>
         )}
-        
-        <button className="btn btn-secondary" onClick={() => {
-          sessionStorage.removeItem('auth_token');
-          sessionStorage.removeItem('user');
-          window.location.reload();
-        }} style={{ padding: '0.5rem', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, color: '#ff3b30' }}>
-          Log Out
+
+        <button 
+          className="btn btn-secondary" 
+          onClick={onLogout} 
+          style={{ padding: '0.5rem', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }} 
+          title="Sign Out"
+        >
+          <LogOut size={18} />
         </button>
       </div>
     </nav>

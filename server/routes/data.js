@@ -29,7 +29,7 @@ router.delete('/suppliers/:id', async (req, res) => {
 });
 
 router.put('/suppliers/:id', async (req, res) => {
-  const data = await prisma.supplier.updateMany({
+  await prisma.supplier.updateMany({
     where: { id: req.params.id, companyId: req.user.companyId },
     data: req.body
   });
@@ -78,7 +78,7 @@ router.post('/products', async (req, res) => {
 });
 
 router.put('/products/:id', async (req, res) => {
-  const { companyId, id, createdAt, ...updateData } = req.body;
+  const { companyId: _companyId, id: _id, createdAt: _createdAt, ...updateData } = req.body;
   await prisma.product.updateMany({
     where: { id: req.params.id, companyId: req.user.companyId },
     data: updateData
@@ -108,7 +108,7 @@ router.post('/configs', async (req, res) => {
 });
 
 router.put('/configs/:id', async (req, res) => {
-  const { companyId, id, createdAt, ...updateData } = req.body;
+  const { companyId: _companyId, id: _id, createdAt: _createdAt, ...updateData } = req.body;
   if (updateData.consumptionPerPc) updateData.consumptionPerPc = parseFloat(updateData.consumptionPerPc);
   await prisma.productConfig.updateMany({
     where: { id: req.params.id, companyId: req.user.companyId },

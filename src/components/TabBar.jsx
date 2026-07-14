@@ -1,6 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { TAB_REGISTRY } from '../App';
+import { TAB_REGISTRY } from '../data/registry';
 
 const TabBar = ({ tabIds, activeTabId, onSelect, onClose }) => {
   return (
@@ -15,11 +15,7 @@ const TabBar = ({ tabIds, activeTabId, onSelect, onClose }) => {
             className={`tab-item ${activeTabId === id ? 'active' : ''}`}
             onClick={() => onSelect(id)}
           >
-            {metadata.icon && (
-              <div className="tab-icon">
-                <metadata.icon size={12} />
-              </div>
-            )}
+
             <span>{metadata.label}</span>
             <button 
               className="tab-close" 

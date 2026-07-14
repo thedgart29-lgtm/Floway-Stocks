@@ -1,74 +1,96 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import TabBar from './components/TabBar';
+import TitleBar from './components/TitleBar';
 import Masters from './pages/Masters';
 import Production from './pages/Production';
 import History from './pages/History';
 import Auth from './pages/Auth';
 import Settings from './pages/Settings';
-import { fetchAllData, subscribeDB } from './data/db';
-import { 
-  UserSquare2, 
-  FileBox, 
-  Package, 
-  CircleDot, 
-  Database, 
-  History as HistoryIcon,
-  Settings as SettingsIcon,
-  Users,
-  ArrowUpRight,
-  HardHat,
-  Send,
-  AlertTriangle
-} from 'lucide-react';
-
-// Central registry for tab metadata
-export const TAB_REGISTRY = {
-  suppliers: { label: 'Suppliers Registry', icon: UserSquare2 },
-  clients: { label: 'Client Registry', icon: Users },
-  workers: { label: 'Karigars / Workers', icon: HardHat },
-  materials: { label: 'Raw Materials', icon: FileBox },
-  products: { label: 'Product Catalog', icon: Package },
-  inward: { label: 'Store - Material Inward', icon: CircleDot },
-  issue: { label: 'Store - Issue to Factory', icon: Send },
-  production: { label: 'Factory - Production', icon: Database },
-  loss: { label: 'Factory - Material Loss', icon: AlertTriangle },
-  outward: { label: 'Sales - Outward', icon: ArrowUpRight },
-  history: { label: 'Production History', icon: HistoryIcon },
-  settings: { label: 'Settings', icon: SettingsIcon },
-};
+import OutstandingReport from './pages/OutstandingReport';
+import { fetchAllData, subscribeDB, logOut } from './data/db';
+import { TAB_REGISTRY } from './data/registry';
+import Dashboard from './pages/Dashboard';
 
 function App() {
+  const params = new URLSearchParams(window.location.search);
+  const windowType = params.get('window'); // 'login' or 'main' or null (web)
+
   const [user, setUser] = useState(() => {
-    const saved = sessionStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
+    // Electron login window should never auto-login to render dashboard here
+    if (windowType === 'login') {
+      return null;
+    }
+
+    // sessionStorage: web preview / same window
+    // localStorage: Electron main window after login (different window from login window)
+    const fromSession = sessionStorage.getItem('user');
+    if (fromSession) return JSON.parse(fromSession);
+
+    const fromLocal = localStorage.getItem('auth_user');
+    if (fromLocal) {
+      // Copy to sessionStorage so rest of app works normally
+      sessionStorage.setItem('user', fromLocal);
+      sessionStorage.setItem('auth_token', localStorage.getItem('auth_token') || 'offline-token-12345');
+      return JSON.parse(fromLocal);
+    }
+    return null;
   });
-  const [loading, setLoading] = useState(false);
-  const [dbTick, setDbTick] = useState(0);
+  const [loading, setLoading] = useState(() => {
+    if (windowType === 'login') return false;
+    return !!(sessionStorage.getItem('user') || localStorage.getItem('auth_user'));
+  });
+  const [_dbTick, setDbTick] = useState(0);
+
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('theme') || 'dark';
+  });
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light-theme');
+    } else {
+      document.documentElement.classList.remove('light-theme');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
 
   const [activeTabId, setActiveTabId] = useState(() => {
     const saved = localStorage.getItem('active_tab_id');
-    return (saved && saved !== 'dashboard' && TAB_REGISTRY[saved]) ? saved : 'suppliers';
+    return (saved && TAB_REGISTRY[saved]) ? saved : 'dashboard';
   });
 
   const [tabIds, setTabIds] = useState(() => {
     const saved = localStorage.getItem('open_tabs_ids');
     try {
       const parsed = saved ? JSON.parse(saved) : [];
-      const filtered = parsed.filter(id => id !== 'dashboard' && TAB_REGISTRY[id]);
+      const filtered = parsed.filter(id => TAB_REGISTRY[id]);
       // FORCE: Always ensure the activeTabId is in the list
       if (!filtered.includes(activeTabId)) {
         filtered.push(activeTabId);
       }
       return filtered;
-    } catch (e) {
-      return ['suppliers'];
+    } catch {
+      return ['dashboard'];
     }
   });
 
+  // Auto-login / session redirect if already logged in when Electron login window is opened
+  useEffect(() => {
+    if (windowType === 'login') {
+      const fromLocal = localStorage.getItem('auth_user');
+      if (fromLocal && window.electronAPI?.loginSuccess) {
+        window.electronAPI.loginSuccess();
+      }
+    }
+  }, [windowType]);
+
   useEffect(() => {
     if (user) {
-      setLoading(true);
       fetchAllData().then(() => setLoading(false));
       
       const unsubscribe = subscribeDB(() => {
@@ -85,20 +107,30 @@ function App() {
   }, [tabIds, activeTabId]);
 
   if (!user) {
-    return <Auth onLogin={(u) => setUser(u)} />;
+    return (
+      <Auth onLogin={(u) => {
+        setLoading(true);
+        setUser(u);
+      }} />
+    );
   }
 
+
   if (loading) {
-    return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}><h2>Syncing with Cloud...</h2></div>;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+        <TitleBar user={user} />
+        <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <h2>Syncing with Cloud...</h2>
+        </div>
+      </div>
+    );
   }
 
   const openTab = (id) => {
-    if (!TAB_REGISTRY[id]) return;
-    
-    setTabIds(prev => {
-      if (prev.includes(id)) return prev;
-      return [...prev, id];
-    });
+    if (!tabIds.includes(id)) {
+      setTabIds([...tabIds, id]);
+    }
     setActiveTabId(id);
   };
 
@@ -109,8 +141,8 @@ function App() {
         if (newTabs.length > 0) {
           setActiveTabId(newTabs[newTabs.length - 1]);
         } else {
-          setActiveTabId('suppliers');
-          return ['suppliers'];
+          setActiveTabId('dashboard');
+          return ['dashboard'];
         }
       }
       return newTabs;
@@ -118,37 +150,47 @@ function App() {
   };
 
   const renderContent = () => {
-    const currentType = TAB_REGISTRY[activeTabId] ? activeTabId : 'suppliers';
+    const currentType = TAB_REGISTRY[activeTabId] ? activeTabId : 'dashboard';
 
     switch (currentType) {
+      case 'dashboard':
+        return <Dashboard />;
       case 'suppliers':
       case 'clients':
       case 'workers':
       case 'materials':
       case 'products':
-        return <Masters activeTab={currentType} />;
+        return <Masters key={currentType} activeTab={currentType} />;
       case 'inward':
       case 'issue':
       case 'production':
       case 'loss':
       case 'outward':
-        return <Production activeTab={currentType} />;
+      case 'billing':
+      case 'payments':
+        return <Production key={currentType} activeTab={currentType} />;
       case 'history':
         return <History />;
       case 'settings':
-        return user.role === 'ADMIN' ? <Settings /> : <Masters activeTab="suppliers" />;
+        return <Settings />;
+      case 'outstanding':
+        return <OutstandingReport />;
       default:
-        return <Masters activeTab="suppliers" />;
+        return <Dashboard />;
     }
   };
 
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <Navbar onOpenTab={openTab} activeTabId={activeTabId} user={user} onLogout={() => {
-        sessionStorage.clear();
-        setUser(null);
-        if (window.electronAPI) window.electronAPI.logout();
-      }} />
+      <TitleBar user={user} />
+      <Navbar 
+        onOpenTab={openTab} 
+        activeTabId={activeTabId} 
+        user={user} 
+        theme={theme}
+        toggleTheme={toggleTheme}
+        onLogout={logOut} 
+      />
       
       <TabBar 
         tabIds={tabIds} 
@@ -174,3 +216,4 @@ function App() {
 }
 
 export default App;
+

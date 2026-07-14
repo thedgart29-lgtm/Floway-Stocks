@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { getDB, createEntry, generateBatchCode } from '../data/db';
 import { ClipboardList, Fingerprint, History } from 'lucide-react';
 import DataTable from '../components/DataTable';
@@ -13,19 +13,15 @@ const Entries = () => {
     typeCode: 'IND', // Example default
   });
 
-  const [previewBatch, setPreviewBatch] = useState('');
-
-  useEffect(() => {
+  const previewBatch = useMemo(() => {
     if (form.materialId && form.productId) {
       const material = db.materials.find(m => m.id === form.materialId);
       const product = db.products.find(p => p.id === form.productId);
       if (material && product) {
-        const code = generateBatchCode(product.brand.substring(0, 3).toUpperCase(), material.code, form.typeCode);
-        setPreviewBatch(code);
+        return generateBatchCode(product.brand.substring(0, 3).toUpperCase(), material.code, form.typeCode);
       }
-    } else {
-      setPreviewBatch('');
     }
+    return '';
   }, [form, db]);
 
   const handleSubmit = (e) => {

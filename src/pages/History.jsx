@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDB, deleteItem, getStartOfMonth, getTodayDate } from '../data/db';
 import { FileText, Calendar, Package, Tag, Layers, Trash2, Clock } from 'lucide-react';
 import DataTable from '../components/DataTable';
@@ -94,9 +94,8 @@ const History = () => {
 
   return (
     <div className="fade-in">
-      <div style={{ marginBottom: '1.5rem', padding: '1rem', display: 'flex', alignItems: 'center', gap: '2rem', background: 'white', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
+      <div style={{ marginBottom: '1.5rem', padding: '1rem', display: 'flex', alignItems: 'center', gap: '2rem', background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
-          <Clock size={16} color="var(--text-secondary)" />
           <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Filter History:</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -132,7 +131,7 @@ const History = () => {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ background: '#e1f0ff', padding: '0.75rem', borderRadius: '12px' }}>
+          <div style={{ background: 'rgba(10, 132, 255, 0.15)', padding: '0.75rem', borderRadius: '12px' }}>
             <Package size={24} color="#007aff" />
           </div>
           <div>
@@ -141,7 +140,7 @@ const History = () => {
           </div>
         </div>
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ background: '#e3f9e5', padding: '0.75rem', borderRadius: '12px' }}>
+          <div style={{ background: 'rgba(52, 199, 89, 0.15)', padding: '0.75rem', borderRadius: '12px' }}>
             <Layers size={24} color="#34c759" />
           </div>
           <div>
@@ -150,7 +149,7 @@ const History = () => {
           </div>
         </div>
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ background: '#fef7e0', padding: '0.75rem', borderRadius: '12px' }}>
+          <div style={{ background: 'rgba(245, 158, 11, 0.15)', padding: '0.75rem', borderRadius: '12px' }}>
             <Tag size={24} color="#f59e0b" />
           </div>
           <div>
@@ -163,11 +162,9 @@ const History = () => {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <FileText size={20} color="var(--primary)" />
             Production Register
           </h3>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-             <Calendar size={14} />
              Live Data Feed
           </div>
         </div>

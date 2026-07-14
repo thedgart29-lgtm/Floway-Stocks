@@ -1,0 +1,36 @@
+import { 
+  UserSquare2, 
+  FileBox, 
+  Package, 
+  CircleDot, 
+  Database, 
+  History as HistoryIcon,
+  Settings as SettingsIcon,
+  Users,
+  ArrowUpRight,
+  HardHat,
+  Send,
+  AlertTriangle,
+  LayoutDashboard,
+  Receipt,
+  CreditCard
+} from 'lucide-react';
+
+export const TAB_REGISTRY = {
+  dashboard: { label: 'Overview Dashboard', icon: LayoutDashboard },
+  suppliers: { label: 'Suppliers Registry', icon: UserSquare2 },
+  clients: { label: 'Client Registry', icon: Users },
+  workers: { label: 'Karigars / Workers', icon: HardHat },
+  materials: { label: 'Raw Materials', icon: FileBox },
+  products: { label: 'Product Catalog', icon: Package },
+  inward: { label: 'Store - Material Inward', icon: CircleDot },
+  issue: { label: 'Store - Issue to Factory', icon: Send },
+  production: { label: 'Factory - Production', icon: Database },
+  loss: { label: 'Factory - Material Loss', icon: AlertTriangle },
+  outward: { label: 'Delivery Challan', icon: ArrowUpRight },
+  billing: { label: 'Sales Invoices', icon: Receipt },
+  payments: { label: 'Payment Entry', icon: CreditCard },
+  outstanding: { label: 'Outstanding Report', icon: FileBox },
+  history: { label: 'Production History', icon: HistoryIcon },
+  settings: { label: 'Settings', icon: SettingsIcon },
+};
